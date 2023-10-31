@@ -86,7 +86,12 @@ Ray generateReflectionRay(Ray ray, HitInfo hitInfo)
 Ray generatePassthroughRay(Ray ray, HitInfo hitInfo)
 {
     // TODO: generate a passthrough ray
-    return Ray {};
+    Ray passthrough;
+    passthrough.origin = ray.origin + ray.t * ray.direction;
+    passthrough.direction = ray.direction;
+    passthrough.t = FLT_MAX;
+    return passthrough;
+
 }
 
 // TODO: standard feature
@@ -120,5 +125,18 @@ void renderRayTransparentComponent(RenderState& state, Ray ray, const HitInfo& h
 {
     // TODO; you should first implement generatePassthroughRay()
     Ray r = generatePassthroughRay(ray, hitInfo);
+    r.origin = r.origin + 0.000001f * r.direction;
     // ...
+    float t = hitInfo.material.transparency;
+    if (t == 1)
+        return;
+    else {
+        // enableDebugDraw = true;
+        glm::vec3 color = renderRay(state, r, rayDepth + 1);
+        // drawRay(r, glm::vec3(0,0,0));
+        hitColor = color * (1 - t) * hitInfo.material.kd + hitColor * (t);
+    }
+       
+
+
 }

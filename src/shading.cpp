@@ -5,6 +5,7 @@
 #include <glm/geometric.hpp>
 #include <glm/gtx/string_cast.hpp>
 #include <shading.h>
+#include <algorithm>
 
 // This function is provided as-is. You do not have to implement it (unless
 // you need to for some extra feature).
@@ -81,7 +82,9 @@ glm::vec3 computeLambertianModel(RenderState& state, const glm::vec3& cameraDire
 glm::vec3 computePhongModel(RenderState& state, const glm::vec3& cameraDirection, const glm::vec3& lightDirection, const glm::vec3& lightColor, const HitInfo& hitInfo)
 {
     // TODO: Implement phong shading
-    return sampleMaterialKd(state, hitInfo) * lightColor;
+    glm::vec3 diffuse = sampleMaterialKd(state, hitInfo) * std::max(0.f, glm::dot(lightDirection, hitInfo.normal));
+    glm::vec3 specular = hitInfo.material.ks * pow(glm::dot(glm::normalize(-lightDirection + 2 * glm::dot(lightDirection, hitInfo.normal) * hitInfo.normal), cameraDirection), hitInfo.material.shininess);
+    return (diffuse + specular) * lightColor ;
 }
 
 // TODO: Standard feature
@@ -102,7 +105,14 @@ glm::vec3 computePhongModel(RenderState& state, const glm::vec3& cameraDirection
 glm::vec3 computeBlinnPhongModel(RenderState& state, const glm::vec3& cameraDirection, const glm::vec3& lightDirection, const glm::vec3& lightColor, const HitInfo& hitInfo)
 {
     // TODO: Implement blinn-phong shading
-    return sampleMaterialKd(state, hitInfo) * lightColor;
+    glm::vec3 specular(0.0f);
+    glm::vec3 diffuse(0.0f);
+    // TODO: Implement blinn-phong shading
+    diffuse = sampleMaterialKd(state, hitInfo) * std::max(0.f, glm::dot(lightDirection, hitInfo.normal));
+    specular = hitInfo.material.ks * pow(glm::dot(glm::normalize(lightDirection + cameraDirection), hitInfo.normal), hitInfo.material.shininess);
+
+    // return sampleMaterialKd(state, hitInfo) * lightColor;
+    return (diffuse + specular) ;
 }
 
 // TODO: Standard feature
@@ -114,7 +124,42 @@ glm::vec3 computeBlinnPhongModel(RenderState& state, const glm::vec3& cameraDire
 // This method is unit-tested, so do not change the function signature.
 glm::vec3 LinearGradient::sample(float ti) const
 {
-    return glm::vec3(0.5f);
+    long long n = this->components.size();
+    float max = -1;
+    float min = 1;
+    int maxI = 0;
+    int minI = 0;
+    float upDiff = 1;
+    float downDiff = 1;
+    int upI;
+    int downI;
+    for (int i = 0; i < n; i++) {
+        float copy = this->components[i].t;
+        if (copy < ti)
+                if (ti - copy < downDiff) {
+                    downDiff = ti - copy;
+                    downI = i;
+                }
+        if (copy > ti)
+                if (copy - ti < upDiff) {
+                    upDiff = copy - ti;
+                    upI = i;
+                }
+        if (copy > max) {
+                maxI = i;
+                max = copy;
+        }
+        if (copy < min) {
+                minI = i;
+                min = copy;
+        }
+    }
+    if (ti <= min)
+        return components[minI].color;
+    if (ti >= max)
+        return components[maxI].color;
+
+    return downDiff / (upDiff + downDiff) * this->components[upI].color + upDiff / (upDiff + downDiff) * this->components[downI].color;
 }
 
 // TODO: Standard feature
@@ -135,5 +180,7 @@ glm::vec3 LinearGradient::sample(float ti) const
 glm::vec3 computeLinearGradientModel(RenderState& state, const glm::vec3& cameraDirection, const glm::vec3& lightDirection, const glm::vec3& lightColor, const HitInfo& hitInfo, const LinearGradient& gradient)
 {
     float cos_theta = glm::dot(lightDirection, hitInfo.normal);
-    return glm::vec3(0.f);
+    glm::vec3 diffuse = gradient.sample(cos_theta) * std::max(0.f, glm::dot(lightDirection, hitInfo.normal));
+    glm::vec3 specular = hitInfo.material.ks * pow(glm::dot(-lightDirection + 2 * glm::dot(lightDirection, hitInfo.normal) * hitInfo.normal, cameraDirection), hitInfo.material.shininess);
+    return (diffuse + specular) * lightColor ;
 }
