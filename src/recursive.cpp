@@ -71,9 +71,14 @@ glm::vec3 renderRay(RenderState& state, Ray ray, int rayDepth)
 // This method is unit-tested, so do not change the function signature.
 Ray generateReflectionRay(Ray ray, HitInfo hitInfo)
 {
-    // TODO: generate a mirrored ray
-    //       if you use glm::reflect, you will not get points for this method!
-    return Ray {};
+    glm::vec3 rayDirection = glm::normalize(ray.direction); 
+    float theta = glm::dot(rayDirection, hitInfo.normal); 
+    glm::vec3 reflectDirection = rayDirection - 2.0f * theta * hitInfo.normal;
+    
+    Ray reflectedRay;
+    reflectedRay.origin = ray.origin + ray.t * ray.direction;
+    reflectedRay.direction = reflectDirection;
+    return reflectedRay;
 }
 
 // TODO: Standard feature
@@ -106,9 +111,9 @@ Ray generatePassthroughRay(Ray ray, HitInfo hitInfo)
 // This method is unit-tested, so do not change the function signature.
 void renderRaySpecularComponent(RenderState& state, Ray ray, const HitInfo& hitInfo, glm::vec3& hitColor, int rayDepth)
 {
-    // TODO; you should first implement generateReflectionRay()
-    Ray r = generateReflectionRay(ray, hitInfo);
-    // ...
+    Ray r = generateReflectionRay(ray, hitInfo); 
+    glm::vec3 reflectionColor = renderRay(state, r, rayDepth + 1);
+    hitColor += (reflectionColor * hitInfo.material.ks);
 }
 
 // TODO: standard feature
