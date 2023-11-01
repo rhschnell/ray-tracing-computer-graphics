@@ -128,12 +128,13 @@ glm::vec3 visibilityOfLightSampleTransparency(RenderState& state, const glm::vec
 
                 return visibilityOfLightSampleTransparency(state, lightPosition, lightColor, newRay, infoHit) * infoHit.material.kd * (1 - infoHit.material.transparency);
             } else {
-                return glm::vec3(0.0f);     
+                return glm::vec3(0.0f);
             }
         } else {
             return lightColor;
         }
     } 
+    return lightColor;
 }
 
 // TODO: Standard feature
@@ -160,7 +161,7 @@ glm::vec3 computeContributionPointLight(RenderState& state, const PointLight& li
     if (visibilityOfLight == glm::vec3(0.0f)) {
         return glm::vec3(0.0f);
     }
-    return computeShading(state, v, l, light.color, hitInfo);
+    return computeShading(state, v, l, visibilityOfLight, hitInfo);
 }
 
 // TODO: Standard feature
@@ -202,11 +203,11 @@ glm::vec3 computeContributionSegmentLight(RenderState& state, const SegmentLight
             glm::vec3 l = glm::normalize(position - p);
             glm::vec3 v = -ray.direction;
 
-            totalLight += computeShading(state, v, l, color, hitInfo);
+            totalLight += computeShading(state, v, l, visibleLightColor, hitInfo);
         }
     }
 
-    return totalLight;
+    return totalLight;  
 }
 
 // TODO: Standard feature
@@ -249,7 +250,7 @@ glm::vec3 computeContributionParallelogramLight(RenderState& state, const Parall
             glm::vec3 l = glm::normalize(position - p);
             glm::vec3 v = -ray.direction;
 
-            totalLight += computeShading(state, v, l, color, hitInfo);
+            totalLight += computeShading(state, v, l, visibleLightColor, hitInfo);
         }
     }
 
