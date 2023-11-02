@@ -76,7 +76,7 @@ Ray generateReflectionRay(Ray ray, HitInfo hitInfo)
     glm::vec3 reflectDirection = rayDirection - 2.0f * theta * hitInfo.normal;
     
     Ray reflectedRay;
-    reflectedRay.origin = ray.origin + ray.t * ray.direction;
+    reflectedRay.origin = ray.origin + ray.t * ray.direction + 0.001f * reflectDirection;
     reflectedRay.direction = reflectDirection;
     return reflectedRay;
 }

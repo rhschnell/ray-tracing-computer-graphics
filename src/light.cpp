@@ -72,23 +72,19 @@ void sampleParallelogramLight(const glm::vec2& sample, const ParallelogramLight&
 // This method is unit-tested, so do not change the function signature.
 bool visibilityOfLightSampleBinary(RenderState& state, const glm::vec3& lightPosition, const glm::vec3 &lightColor, const Ray& ray, const HitInfo& hitInfo)
 {
-    if (!state.features.enableShadows) {
+    glm::vec3 hitPoint = ray.origin + ray.t * ray.direction;
+
+    Ray pointToLight; 
+    glm::vec3 direction = glm::normalize(lightPosition - hitPoint); 
+    pointToLight.origin = 0.001f * direction + hitPoint; 
+    pointToLight.direction = direction; 
+    pointToLight.t = glm::distance(hitPoint, lightPosition) - 0.002f; 
+
+    HitInfo infoHit;   
+    if (state.bvh.intersect(state, pointToLight, infoHit))
+        return false;
+    else
         return true;
-    } else {
-        glm::vec3 hitPoint = ray.origin + ray.t * ray.direction;
-
-        Ray pointToLight;
-        glm::vec3 direction = glm::normalize(lightPosition - hitPoint);
-        pointToLight.origin = 0.001f * direction + hitPoint;
-        pointToLight.direction = direction;
-        pointToLight.t = glm::distance(hitPoint, lightPosition) - 0.002f;
-
-        HitInfo infoHit;
-        if (state.bvh.intersect(state, pointToLight, infoHit))
-            return false;
-        else
-            return true;
-    }
 }
 
 // TODO: Standard feature
@@ -159,10 +155,13 @@ glm::vec3 computeContributionPointLight(RenderState& state, const PointLight& li
 
     glm::vec3 visibilityOfLight = visibilityOfLightSample(state, light.position, light.color, ray, hitInfo);
     if (visibilityOfLight == glm::vec3(0.0f)) {
-        return glm::vec3(0.0f);
+        return glm::vec3(0.0f); 
+    } else if (visibilityOfLight == light.color) {
+        return computeShading(state, v, l, visibilityOfLight, hitInfo);
+    } else {
+        return visibilityOfLight;
     }
-    return computeShading(state, v, l, visibilityOfLight, hitInfo);
-}
+ }
 
 // TODO: Standard feature
 // Given a single segment light, compute its contribution towards an incident ray at an intersection point
@@ -188,25 +187,21 @@ glm::vec3 computeContributionSegmentLight(RenderState& state, const SegmentLight
     // - test the sample's visibility
     // - then evaluate the phong model
     glm::vec3 totalLight = glm::vec3(0.0f);
+    float f = 1.0 / numSamples;
+    glm::vec3 position;
+    glm::vec3 color;
 
-    for (int i = 0; i < numSamples; i++) {
-        float t = state.sampler.next_1d();
-
-        glm::vec3 position;
-        glm::vec3 color;
-        sampleSegmentLight(t, light, position, color);
+    for (uint32_t i = 0; i < numSamples; i++) {
+        sampleSegmentLight(state.sampler.next_1d(), light, position, color);
+        
+        glm::vec3 p = ray.origin + ray.t * ray.direction;
+        glm::vec3 l = glm::normalize(position - p);
+        glm::vec3 v = -ray.direction;
 
         glm::vec3 visibleLightColor = visibilityOfLightSample(state, position, color, ray, hitInfo);
+        totalLight += f * computeShading(state, v, l, color, hitInfo) * visibleLightColor;
 
-        if (visibleLightColor != glm::vec3(0.0f)) {
-            glm::vec3 p = ray.origin + ray.t * ray.direction;
-            glm::vec3 l = glm::normalize(position - p);
-            glm::vec3 v = -ray.direction;
-
-            totalLight += computeShading(state, v, l, visibleLightColor, hitInfo);
-        }
     }
-
     return totalLight;  
 }
 
@@ -235,25 +230,20 @@ glm::vec3 computeContributionParallelogramLight(RenderState& state, const Parall
     // - test the sample's visibility
     // - then evaluate the phong model
     glm::vec3 totalLight = glm::vec3(0.0f);
+    float f = 1.0 / numSamples;
+    glm::vec3 position;
+    glm::vec3 color;
 
-    for (int i = 0; i < numSamples; i++) {
-        glm::vec2 t = state.sampler.next_2d();
+    for (uint32_t i = 0; i < numSamples; i++) {
+        sampleParallelogramLight(state.sampler.next_2d(), light, position, color);
 
-        glm::vec3 position;
-        glm::vec3 color;
-        sampleParallelogramLight(t, light, position, color);
-
+        glm::vec3 p = ray.origin + ray.t * ray.direction;
+        glm::vec3 l = glm::normalize(position - p);
+        glm::vec3 v = -ray.direction;
+    
         glm::vec3 visibleLightColor = visibilityOfLightSample(state, position, color, ray, hitInfo);
-
-        if (visibleLightColor != glm::vec3(0.0f)) {
-            glm::vec3 p = ray.origin + ray.t * ray.direction;
-            glm::vec3 l = glm::normalize(position - p);
-            glm::vec3 v = -ray.direction;
-
-            totalLight += computeShading(state, v, l, visibleLightColor, hitInfo);
-        }
+        totalLight += f * computeShading(state, v, l, color, hitInfo) * visibleLightColor;
     }
-
     return totalLight;
 }
 
