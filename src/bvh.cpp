@@ -125,11 +125,13 @@ AxisAlignedBox computePrimitiveAABB(const BVHInterface::Primitive primitive)
 // This method is unit-tested, so do not change the function signature.
 AxisAlignedBox computeSpanAABB(std::span<const BVHInterface::Primitive> primitives)
 {
-  
+    if (primitives.empty()) {
+        return { .lower = { 0.0f, 0.0f, 0.0f }, .upper = { 0.0f, 0.0f, 0.0f } };
+    }
     std::vector<float> x;
     std::vector<float> y;
     std::vector<float> z;
-    for (BVHInterface::Primitive primitive : primitives)
+    for (const BVHInterface::Primitive& primitive : primitives)
     {
         x.push_back(primitive.v0.position[0]);
         x.push_back(primitive.v1.position[0]);
@@ -147,6 +149,7 @@ AxisAlignedBox computeSpanAABB(std::span<const BVHInterface::Primitive> primitiv
     std::sort(y.begin(), y.end());
     std::sort(z.begin(), z.end());
     int length = std::size(primitives)*3-1;
+    length = std::max(0, length); 
     return { .lower = { x[0], y[0], z[0] }, .upper = { x[length], y[length], z[length] } };
 }
 
