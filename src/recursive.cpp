@@ -134,7 +134,7 @@ void renderRayTransparentComponent(RenderState& state, Ray ray, const HitInfo& h
         // enableDebugDraw = true;
         glm::vec3 color = renderRay(state, r, rayDepth + 1);
         // drawRay(r, glm::vec3(0,0,0));
-        hitColor = color * (1 - t) * hitInfo.material.kd + hitColor * (t);
+        hitColor = color * (1 - t)  + hitColor * (t);
     }
        
 
