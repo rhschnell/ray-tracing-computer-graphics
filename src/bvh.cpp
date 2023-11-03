@@ -242,7 +242,21 @@ bool intersectRayWithBVH(RenderState& state, const BVHInterface& bvh, Ray& ray, 
     bool is_hit = false;
     Ray copy = ray;
 
-    if (state.features.enableAccelStructure) {
+    if (state.features.extra.enableMotionBlur) {
+        for (const auto& m : state.scene.meshes) {
+            for (const auto& t : m.triangles) {
+                const auto& [v0, v1, v2] = std::tie(m.vertices[t[0]], m.vertices[t[1]], m.vertices[t[2]]);
+                if (intersectRayWithTriangle(v0.position, v1.position, v2.position, ray, hitInfo)) {
+                    BVHInterface::Primitive primitive = BVHInterface::Primitive(); 
+                    primitive.v0 = v0;
+                    primitive.v1 = v1;
+                    primitive.v2 = v2;
+                    updateHitInfo(state, primitive, ray, hitInfo);
+                    is_hit = true;
+                }
+            }
+        }
+    } else if (state.features.enableAccelStructure) {
         // TODO: implement here your (probably stack-based) BVH traversal.
         //
         // Some hints (refer to bvh_interface.h either way). BVH nodes are packed, so the
@@ -293,13 +307,11 @@ bool intersectRayWithBVH(RenderState& state, const BVHInterface& bvh, Ray& ray, 
                 is_hit = true;
             }
         }
-        // Intersect with spheres.
-        for (const auto& sphere : state.scene.spheres)
-            is_hit |= intersectRayWithShape(sphere, ray, hitInfo);
     }
 
-
- 
+    // Intersect with spheres.
+    for (const auto& sphere : state.scene.spheres)
+        is_hit |= intersectRayWithShape(sphere, ray, hitInfo);
 
     return is_hit;
 }

@@ -3,6 +3,7 @@
 #include "light.h"
 #include "recursive.h"
 #include "shading.h"
+#include <iostream>
 #include <framework/trackball.h>
 
 // TODO; Extra feature
@@ -18,6 +19,11 @@ void renderImageWithDepthOfField(const Scene& scene, const BVHInterface& bvh, co
     }
 
     // ...
+    }
+
+glm::vec3 getBezierCurveValue(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, float t) {
+    glm::vec3 bezierCurveValue = (1 - t) * (1 - t) * p0 + 2 * t * (1 - t) * p1 + t * t * p2;
+    return bezierCurveValue;
 }
 
 // TODO; Extra feature
@@ -28,10 +34,56 @@ void renderImageWithDepthOfField(const Scene& scene, const BVHInterface& bvh, co
 // not go on a hunting expedition for your implementation, so please keep it here!
 void renderImageWithMotionBlur(const Scene& scene, const BVHInterface& bvh, const Features& features, const Trackball& camera, Screen& screen)
 {
-    if (!features.extra.enableMotionBlur) {
-        return;
-    }
+    for (int y = 0; y < screen.resolution().y; y++) {
+        for (int x = 0; x != screen.resolution().x; x++) {
+            RenderState state = {
+                .scene = scene,
+                .features = features,
+                .bvh = bvh,
+                .sampler = { static_cast<uint32_t>(screen.resolution().y * x + y) }
+            };
 
+            glm::vec3 totalColor = glm::vec3(0.0f);
+
+            auto rays = generatePixelRays(state, camera, { x, y }, screen.resolution());
+            float raySize = rays.size();
+
+            for (int i = 0; i < rays.size(); i += 1) {
+                float time = state.sampler.next_1d();
+
+                glm::vec3 p0 = { 0.0f, 0.0f, 0.0f };
+                glm::vec3 p1 = { state.sampler.next_1d(), state.sampler.next_1d(), 0.0f };
+                glm::vec3 p2 = { 1.0f, 1.0f, 0.0f };
+
+                glm::vec3 t = getBezierCurveValue(p0, p1, p2, time);
+
+                Scene modifiedScene = scene;
+                for (Sphere& sphere : modifiedScene.spheres) {
+                    sphere.center += t;
+                }
+                for (Mesh& mesh : modifiedScene.meshes) {
+                    for (Vertex& vertex : mesh.vertices) {
+                        vertex.position += t;
+                    }
+                }
+
+                RenderState renderState = {
+                    .scene = modifiedScene,
+                    .features = features,
+                    .bvh = bvh,
+                    .sampler = { static_cast<uint32_t>(screen.resolution().y * x + y) }
+                };
+
+                auto L = renderRays(renderState, rays);
+
+                totalColor += L;
+            }
+
+            glm::vec3 averageColor = totalColor / raySize;
+
+            screen.setPixel(x, y, averageColor);
+        }
+    }
 }
 
 // TODO; Extra feature
