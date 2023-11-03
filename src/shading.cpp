@@ -83,7 +83,7 @@ glm::vec3 computePhongModel(RenderState& state, const glm::vec3& cameraDirection
 {
     // TODO: Implement phong shading
     glm::vec3 diffuse = sampleMaterialKd(state, hitInfo) * std::max(0.f, glm::dot(lightDirection, hitInfo.normal));
-    glm::vec3 specular = hitInfo.material.ks * pow(glm::dot(glm::normalize(-lightDirection + 2 * glm::dot(lightDirection, hitInfo.normal) * hitInfo.normal), cameraDirection), hitInfo.material.shininess);
+    glm::vec3 specular = hitInfo.material.ks * pow(std::max(0.f,glm::dot(glm::normalize(-lightDirection + 2 * glm::dot(lightDirection, hitInfo.normal) * hitInfo.normal), cameraDirection)), hitInfo.material.shininess);
     return (diffuse + specular) * lightColor ;
 }
 
@@ -109,10 +109,10 @@ glm::vec3 computeBlinnPhongModel(RenderState& state, const glm::vec3& cameraDire
     glm::vec3 diffuse(0.0f);
     // TODO: Implement blinn-phong shading
     diffuse = sampleMaterialKd(state, hitInfo) * std::max(0.f, glm::dot(lightDirection, hitInfo.normal));
-    specular = hitInfo.material.ks * pow(glm::dot(glm::normalize(lightDirection + cameraDirection), hitInfo.normal), hitInfo.material.shininess);
+    specular = hitInfo.material.ks * pow(std::max(0.f,glm::dot(glm::normalize(lightDirection + cameraDirection), hitInfo.normal)), hitInfo.material.shininess);
 
     // return sampleMaterialKd(state, hitInfo) * lightColor;
-    return (diffuse + specular) ;
+    return (diffuse + specular) * lightColor;
 }
 
 // TODO: Standard feature
@@ -181,6 +181,6 @@ glm::vec3 computeLinearGradientModel(RenderState& state, const glm::vec3& camera
 {
     float cos_theta = glm::dot(lightDirection, hitInfo.normal);
     glm::vec3 diffuse = gradient.sample(cos_theta) * std::max(0.f, glm::dot(lightDirection, hitInfo.normal));
-    glm::vec3 specular = hitInfo.material.ks * pow(glm::dot(-lightDirection + 2 * glm::dot(lightDirection, hitInfo.normal) * hitInfo.normal, cameraDirection), hitInfo.material.shininess);
+    glm::vec3 specular = hitInfo.material.ks * pow(std::max(0.f,glm::dot(-lightDirection + 2 * glm::dot(lightDirection, hitInfo.normal) * hitInfo.normal, cameraDirection)), hitInfo.material.shininess);
     return (diffuse + specular) * lightColor ;
 }
